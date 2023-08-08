@@ -15,10 +15,10 @@ contract TERC20 is ERC20, ERC20Burnable, Pausable, Ownable {
     constructor(
         string memory name,
         string memory symbol,
-        address preSaleContract,
+        // address preSaleContract,
         uint maxSupply
     ) ERC20(name, symbol) {
-        updatePreSaleContract(preSaleContract);
+        // updatePreSaleContract(preSaleContract);
         updateMaxSupply(maxSupply);
     }
 

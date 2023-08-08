@@ -4,6 +4,10 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+//transfer funds 
+//update functions
+// withdraw unused tokens
+
 contract Presale is Pausable, Ownable {
     
     bool public _looslyCoupled;
@@ -32,6 +36,7 @@ contract Presale is Pausable, Ownable {
     uint256 public _releasePeriod;
 
     mapping(address => uint256) public _releasedTokens;
+     mapping(address => uint256) public _transferedTokens;
     mapping(address => uint256) public _lastTimeTokenReleased;
 
     constructor(
@@ -99,7 +104,7 @@ contract Presale is Pausable, Ownable {
     }
 
     function claimToken() public {
-        require(_releasedTokens[msg.sender] > 0, "Presale: Don't have any released token");
+        require(_releasedTokens[msg.sender] - _transferedTokens[msg.sender] > 0, "Presale: Don't have any sufficient balance to release");
 
         if (_looslyCoupled){
             _tokenContract.transferFrom(_tokenHolder, msg.sender, _releasedTokens[msg.sender]);
@@ -111,11 +116,40 @@ contract Presale is Pausable, Ownable {
             
            require(success, "Presale: Function call failed");
         }
+
+        _transferedTokens[msg.sender] += _releasedTokens[msg.sender];
     }
 
-    function updateTotalTokenForPresale(uint updatedSupply) public onlyOwner{
-        _totalTokensForPreSale = updatedSupply;
+    function withdrawAmount(uint amount) public onlyOwner{
+        require(amount > 0, "Main: amount is 0");
+        require(amount <= address(this).balance, "Main: Insufficient balance");
+        payable(owner()).transfer(amount);
     }
+
+    function withdrawUnsoldTokens() public onlyOwner{
+        
+        uint remainingTokens = _totalTokensForPreSale - _soldTokens;
+
+        require(remainingTokens > 0, "Presale: All tokens are sold");
+        
+        if (_looslyCoupled){
+            _tokenContract.transferFrom(_tokenHolder, owner(), remainingTokens);
+        }
+        else{
+            bytes memory payload = abi.encodeWithSignature("mint(address,uint256)", msg.sender, remainingTokens);
+
+            (bool success, ) = _tokenHolder.call(payload);
+            
+           require(success, "Presale: Function call failed");
+        }
+
+        _soldTokens = _totalTokensForPreSale;
+    }
+
+    // check for updates is >= supplied amount
+    // function updateTotalTokenForPresale(uint updatedSupply) public onlyOwner{
+    //     _totalTokensForPreSale = updatedSupply;
+    // }
 
     function updatePresalePrice(uint updatedPrice) public onlyOwner{
         _preSalePrice = updatedPrice;
