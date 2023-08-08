@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //transfer funds 
 //update functions
 // withdraw unused tokens
+// decimals issue
 
 contract Presale is Pausable, Ownable {
     
