@@ -4,7 +4,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-// decimals issue
+// decimals 
 // int values >=
 
 contract Airdrop is Pausable, Ownable {
@@ -17,16 +17,17 @@ contract Airdrop is Pausable, Ownable {
     int public _rewardRate;
     uint public _decimals;
 
-    // constructor() {
-        
-    // }
+    constructor(int supplyForAirdrop, int rewardRate, address tokenContract, address tokenHolder) {
+        updateTotalTokenForAirdrop(supplyForAirdrop);
+        updateRewardRate(rewardRate);
+        updateTokenContract(tokenContract);
+        updateTokenHolder(tokenHolder);
 
-    function updateRewardRate(int rate) public onlyOwner{
-        require(rate > 0, "Airdrop: Invalid reward rate");
-        _rewardRate = rate;
+        _decimals = 18;
+        _looslyCoupled = false;
     }
 
-    function distributeTokens(address[] calldata users, uint[] calldata points) public onlyOwner{
+    function distributeTokens(address[] calldata users, uint[] calldata points) public onlyOwner whenNotPaused{
         require(users.length == points.length, "Airdrop: Different lengths of user and point array");
         require(calculateTotalReward(points) + _distributedTokens <= _totalTokensForAirdrop, "Airdrop: Dont have sufficient tokens to distribute");
         
@@ -58,6 +59,34 @@ contract Airdrop is Pausable, Ownable {
         }
 
         return totalReward;
+    }
+
+    function updateCoupling(bool status) public onlyOwner{
+        _looslyCoupled = status;
+    }
+
+    function updateTokenHolder(address tokenHolder) public onlyOwner{
+        require(tokenHolder != address(0), "Airdrop: Null token holder address");
+        _tokenHolder = tokenHolder;
+    }
+
+    function updateTokenContract(address addr) public onlyOwner{
+        require(addr.code.length > 0, "Airdrop: Invalid token contract address");
+        _tokenContract = IERC20(addr);
+    }
+
+    function updateRewardRate(int rate) public onlyOwner{
+        require(rate > 0, "Airdrop: Invalid reward rate");
+        _rewardRate = rate;
+    }
+
+    function updateTotalTokenForAirdrop(int supply) public onlyOwner{
+        require(supply >= _distributedTokens, "Airdrop: New supply should be >= distributed tokens");
+        _totalTokensForAirdrop = supply;
+    }
+
+    function updateDecimals(uint decimals) public onlyOwner{
+        _decimals = decimals;
     }
 
     function isValidUserAddress(address[] calldata users) private pure {
